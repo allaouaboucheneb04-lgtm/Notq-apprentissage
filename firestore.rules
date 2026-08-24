@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /orthophonists/{orthophonistId} {
+      allow read, create, update: if request.auth != null && request.auth.uid == orthophonistId;
+      allow delete: if false;
+      match /{collection}/{documentId} {
+        allow read, create, update, delete: if request.auth != null && request.auth.uid == orthophonistId
+          && collection in ['children', 'exercises', 'sessions', 'results'];
+      }
+    }
+  }
+}

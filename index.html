@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#218a73"><title>Notq — Apprentissage arabe</title>
+  <link rel="stylesheet" href="styles.css"><link rel="manifest" href="manifest.json">
+</head>
+<body>
+<div id="loading" class="loading"><div class="loader-logo" lang="ar">ن</div><p>Chargement de Notq…</p></div>
+<section id="authView" class="auth-view hidden">
+  <div class="auth-card"><div class="auth-brand"><span lang="ar">ن</span><div><b>نُطْق</b><small>Apprendre autrement</small></div></div>
+    <h1>Bienvenue</h1><p>Connectez-vous à votre espace orthophoniste.</p>
+    <form id="loginForm"><label>Adresse e-mail<input id="loginEmail" type="email" required placeholder="orthophoniste@email.com"></label><label>Mot de passe<input id="loginPassword" type="password" required minlength="6" placeholder="••••••••"></label><button class="primary" type="submit">Se connecter</button></form>
+    <button id="demoBtn" class="demo-btn">Essayer la démonstration</button><p id="authError" class="error"></p>
+  </div>
+</section>
+<div id="appView" class="app hidden">
+  <aside class="sidebar"><div class="brand"><span lang="ar">ن</span><div><b>نُطْق</b><small>Apprendre autrement</small></div></div>
+    <nav><button class="nav active" data-page="dashboard">⌂ <span>Tableau de bord</span></button><button class="nav" data-page="children">♙ <span>Enfants</span><em id="childrenCount">0</em></button><button class="nav" data-page="exercises">▤ <span>Exercices</span></button><button class="nav" data-page="progress">↗ <span>Progression</span></button><button class="nav" data-page="sessions">□ <span>Séances</span></button></nav>
+    <div class="aside-bottom"><button class="nav">⚙ <span>Paramètres</span></button><div class="profile"><span>SB</span><div><b id="profileName">Dr. Sara B.</b><small>Orthophoniste</small></div><button id="logoutBtn" title="Déconnexion">↪</button></div></div>
+  </aside>
+  <main><header><button id="menuBtn" class="menu-btn">☰</button><div class="search">⌕ <input id="searchInput" placeholder="Rechercher un enfant…"></div><button class="bell">♢</button><button id="addChildBtn" class="primary">＋ <span>Nouvel enfant</span></button></header>
+    <div class="content">
+      <section id="dashboardPage" class="page active">
+        <div class="welcome"><div><p id="todayLabel"></p><h1>Bonjour, <span id="welcomeName">Dr. Sara</span> 👋</h1><small>Voici un aperçu des progrès de vos petits champions.</small></div><div class="next"><label>PROCHAINE SÉANCE</label><strong>14:30</strong><div><span>YK</span><p><b>Yanis K.</b><small>Lecture · 45 min</small></p></div></div></div>
+        <div class="stats"><article><i class="green">♙</i><div><small>Enfants suivis</small><b id="statChildren">0</b><em>Dossiers actifs</em></div></article><article><i class="blue">□</i><div><small>Séances ce mois</small><b id="statSessions">0</b><em id="weekSessions">0 cette semaine</em></div></article><article><i class="violet">↗</i><div><small>Progression moyenne</small><b id="avgProgress">0%</b><em>Résultats récents</em></div></article><article><i class="orange">▤</i><div><small>Exercices réalisés</small><b id="statExercises">0</b><em>Activités terminées</em></div></article></div>
+        <div class="dashboard-grid"><section class="panel"><div class="panel-head"><div><h2>Enfants récents</h2><p>Derniers dossiers consultés</p></div><button data-goto="children">Voir tout ›</button></div><div id="recentChildren" class="children-list"></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>Profil de compétences</h2><p id="skillChildName">Sélectionnez un enfant</p></div></div><div id="skillsList" class="skills"></div><div class="insight"><i>i</i><p><b>Point d’attention</b><span id="attentionText">Les observations apparaîtront ici.</span></p></div></section></div>
+        <section class="recommended"><div class="section-head"><div><h2>Activités recommandées</h2><p>Adaptées aux besoins actuels de l’enfant</p></div><button id="addExerciseBtn">＋ Créer un exercice</button></div><div id="recommendedGrid" class="cards"></div></section>
+      </section>
+      <section id="childrenPage" class="page"><div class="page-title"><div><h1>Enfants</h1><p>Gérez les dossiers et le suivi des enfants.</p></div><button class="primary add-child-secondary">＋ Ajouter un enfant</button></div><div id="allChildren" class="table-card"></div></section>
+      <section id="exercisesPage" class="page"><div class="page-title"><div><h1>Bibliothèque d’exercices</h1><p>Activités d’apprentissage en langue arabe.</p></div><button class="primary add-exercise-secondary">＋ Créer</button></div><div id="exerciseLibrary" class="exercise-library"></div></section>
+      <section id="progressPage" class="page"><div class="page-title"><div><h1>Progression</h1><p>Analyse des compétences et des résultats.</p></div></div><div id="progressCards" class="progress-cards"></div></section>
+      <section id="sessionsPage" class="page"><div class="page-title"><div><h1>Séances</h1><p>Historique et prochaines séances.</p></div><button id="addSessionBtn" class="primary">＋ Nouvelle séance</button></div><div id="sessionsList" class="table-card"></div></section>
+    </div>
+  </main>
+  <nav class="mobile-nav"><button data-page="dashboard" class="active">⌂<span>Accueil</span></button><button data-page="children">♙<span>Enfants</span></button><button data-page="exercises">▤<span>Exercices</span></button><button data-page="progress">↗<span>Progrès</span></button></nav>
+</div>
+<div id="modal" class="modal-backdrop hidden"><form id="modalForm" class="modal"><button type="button" id="closeModal" class="close">×</button><div id="modalSymbol" class="modal-symbol" lang="ar">طفل</div><h2 id="modalTitle">Ajouter un enfant</h2><p id="modalSubtitle"></p><div id="modalFields"></div><button type="submit" class="primary submit">Enregistrer</button></form></div>
+<div id="toast" class="toast hidden"></div>
+<script type="module" src="app.js"></script>
+</body></html>

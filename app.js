@@ -1,0 +1,76 @@
+import { firebaseConfig } from './firebase-config.js';
+
+const demoChildren=[
+ {id:'ines',name:'Inès B.',age:7,level:'2e année primaire',focus:'Lecture syllabique',progress:68,attention:'Confusion régulière entre les lettres ب، ت، ث'},
+ {id:'yanis',name:'Yanis K.',age:6,level:'1re année primaire',focus:'Discrimination visuelle',progress:74,attention:'Difficulté à différencier les formes proches'},
+ {id:'lina',name:'Lina A.',age:8,level:'3e année primaire',focus:'Compréhension',progress:82,attention:'Renforcer la compréhension des consignes'},
+ {id:'adam',name:'Adam M.',age:5,level:'Préscolaire',focus:'Reconnaissance des lettres',progress:51,attention:'Consolider les lettres isolées'}
+];
+const demoExercises=[
+ {id:'e1',symbol:'أ',title:'Trouve la lettre',skill:'Reconnaissance visuelle',level:'Facile'},
+ {id:'e2',symbol:'بَ',title:'Écoute et choisis',skill:'Discrimination auditive',level:'Moyen'},
+ {id:'e3',symbol:'بـ ـتـ ـث',title:'Lettres ressemblantes',skill:'Attention visuelle',level:'Moyen'},
+ {id:'e4',symbol:'مَـ + ـاء',title:'Construis le mot',skill:'Lecture syllabique',level:'Avancé'}
+];
+const demoSessions=[{id:'s1',childName:'Yanis K.',date:'2026-08-24',time:'14:30',type:'Lecture',duration:45},{id:'s2',childName:'Inès B.',date:'2026-08-25',time:'10:00',type:'Discrimination auditive',duration:45}];
+
+let firebase=null, db=null, auth=null, user=null, demo=false, children=[], exercises=[], sessions=[], modalType='';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const initials=n=>n.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+const safe=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const configured=()=>firebaseConfig.apiKey&&!firebaseConfig.apiKey.startsWith('VOTRE_');
+
+async function boot(){
+  bindEvents();
+  $('#todayLabel').textContent=new Intl.DateTimeFormat('fr-DZ',{weekday:'long',day:'numeric',month:'long'}).format(new Date()).toUpperCase();
+  if(!configured()){ showAuth(); return; }
+  try{
+    const appMod=await import('https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js');
+    const authMod=await import('https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js');
+    const fireMod=await import('https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js');
+    const app=appMod.initializeApp(firebaseConfig); auth=authMod.getAuth(app); db=fireMod.getFirestore(app); firebase={...authMod,...fireMod};
+    import('https://www.gstatic.com/firebasejs/10.13.1/firebase-analytics.js')
+      .then(async analyticsMod=>{if(await analyticsMod.isSupported()) analyticsMod.getAnalytics(app)})
+      .catch(()=>{});
+    authMod.onAuthStateChanged(auth,async current=>{if(current){user=current;await loadData();showApp()}else showAuth()});
+  }catch(e){console.error(e);showAuth('Connexion Firebase impossible. Vérifiez la configuration.');}
+}
+function showAuth(error=''){$('#loading').classList.add('hidden');$('#appView').classList.add('hidden');$('#authView').classList.remove('hidden');$('#authError').textContent=error}
+function showApp(){$('#loading').classList.add('hidden');$('#authView').classList.add('hidden');$('#appView').classList.remove('hidden');render()}
+async function loadData(){
+  try{
+    const root=`orthophonists/${user.uid}`;
+    const [c,e,s]=await Promise.all(['children','exercises','sessions'].map(x=>firebase.getDocs(firebase.collection(db,`${root}/${x}`))));
+    children=c.docs.map(d=>({id:d.id,...d.data()})); exercises=e.docs.map(d=>({id:d.id,...d.data()})); sessions=s.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){console.error(e);toast('Erreur de lecture des données')}
+}
+async function save(collectionName,data){
+  if(demo){data.id=crypto.randomUUID();({children,exercises,sessions}[collectionName==='children'?'children':collectionName==='exercises'?'exercises':'sessions']);if(collectionName==='children')children.unshift(data);if(collectionName==='exercises')exercises.unshift(data);if(collectionName==='sessions')sessions.unshift(data);return}
+  const ref=await firebase.addDoc(firebase.collection(db,`orthophonists/${user.uid}/${collectionName}`),{...data,createdAt:firebase.serverTimestamp()});data.id=ref.id;
+  if(collectionName==='children')children.unshift(data);if(collectionName==='exercises')exercises.unshift(data);if(collectionName==='sessions')sessions.unshift(data);
+}
+function startDemo(){demo=true;user={uid:'demo',displayName:'Dr. Sara B.'};children=structuredClone(demoChildren);exercises=structuredClone(demoExercises);sessions=structuredClone(demoSessions);showApp();toast('Mode démonstration — données non enregistrées')}
+function render(){
+  const name=user?.displayName||user?.email?.split('@')[0]||'Orthophoniste';$('#profileName').textContent=name;$('#welcomeName').textContent=name.replace(/\s+[A-Z].*$/,'');
+  $('#childrenCount').textContent=children.length;$('#statChildren').textContent=children.length;$('#statSessions').textContent=sessions.length;$('#weekSessions').textContent=`${sessions.length} planifiée(s)`;$('#statExercises').textContent=exercises.length;$('#avgProgress').textContent=children.length?`${Math.round(children.reduce((a,c)=>a+Number(c.progress||0),0)/children.length)}%`:'0%';
+  renderChildren();renderSkills(children[0]);renderExercises();renderSessions();renderProgress();
+}
+function childHTML(c,table=false){return table?`<div class="table-row"><div><strong>${safe(c.name)}</strong><small>${safe(c.age)} ans · ${safe(c.level)}</small></div><span>${safe(c.focus||'À définir')}</span><span><div class="bar"><span style="width:${Number(c.progress||0)}%"></span></div></span><strong>${Number(c.progress||0)}%</strong></div>`:`<button class="child-row" data-child="${safe(c.id)}"><span class="avatar">${initials(c.name)}</span><p><b>${safe(c.name)}</b><small>${safe(c.age)} ans · ${safe(c.level)}</small></p><p class="focus"><small>Travail en cours</small><b>${safe(c.focus||'À définir')}</b></p><div><div class="bar"><span style="width:${Number(c.progress||0)}%"></span></div><small>${Number(c.progress||0)}%</small></div></button>`}
+function renderChildren(){const q=$('#searchInput').value.toLowerCase(),list=children.filter(c=>c.name.toLowerCase().includes(q));$('#recentChildren').innerHTML=list.slice(0,4).map(c=>childHTML(c)).join('')||'<div class="empty">Aucun enfant trouvé</div>';$('#allChildren').innerHTML=list.map(c=>childHTML(c,true)).join('')||'<div class="empty">Ajoutez votre premier enfant</div>';$$('[data-child]').forEach(b=>b.onclick=()=>{const c=children.find(x=>x.id===b.dataset.child);renderSkills(c);toast(`Dossier de ${c.name} sélectionné`)})}
+function renderSkills(c){const data=[['Reconnaissance des lettres','تمييز الحروف',c?.letters??82,'#249276'],['Discrimination visuelle','التمييز البصري',c?.visual??67,'#628dcf'],['Mémoire auditive','الذاكرة السمعية',c?.auditory??54,'#e5935c'],['Lecture syllabique','قراءة المقاطع',c?.reading??c?.progress??41,'#9970c2']];$('#skillChildName').textContent=c?`${c.name} · profil actuel`:'Sélectionnez un enfant';$('#attentionText').textContent=c?.attention||'Aucune observation enregistrée.';$('#skillsList').innerHTML=data.map(s=>`<div class="skill"><p><b>${s[0]}</b><small dir="rtl">${s[1]}</small></p><div class="bar"><span style="width:${s[2]}%;background:${s[3]}"></span></div><b style="color:${s[3]}">${s[2]}%</b></div>`).join('')}
+function exerciseHTML(e){return `<article class="exercise-card"><div class="exercise-art" dir="rtl">${safe(e.symbol||'أ')}</div><div><span class="tag">${safe(e.level||'Facile')}</span><h3>${safe(e.title)}</h3><p>${safe(e.skill||'Apprentissage arabe')}</p><small>5–8 min · 8 questions</small></div></article>`}
+function renderExercises(){$('#recommendedGrid').innerHTML=exercises.slice(0,4).map(exerciseHTML).join('')||'<div class="empty">Créez un exercice</div>';$('#exerciseLibrary').innerHTML=exercises.map(exerciseHTML).join('')||'<div class="empty">Aucun exercice</div>'}
+function renderSessions(){$('#sessionsList').innerHTML=sessions.map(s=>`<div class="table-row"><div><strong>${safe(s.childName)}</strong><small>${safe(s.type)}</small></div><span>${safe(s.date)}</span><span>${safe(s.time)}</span><strong>${safe(s.duration)} min</strong></div>`).join('')||'<div class="empty">Aucune séance planifiée</div>'}
+function renderProgress(){$('#progressCards').innerHTML=children.map(c=>`<article class="progress-card"><h3>${safe(c.name)}</h3><p>${safe(c.focus||c.level)}</p><strong>${Number(c.progress||0)}%</strong><div class="bar"><span style="width:${Number(c.progress||0)}%"></span></div></article>`).join('')||'<div class="empty">Aucune donnée</div>'}
+function go(page){$$('.page,.nav,.mobile-nav button').forEach(x=>x.classList.remove('active'));$(`#${page}Page`)?.classList.add('active');$$(`[data-page="${page}"]`).forEach(x=>x.classList.add('active'));$('.sidebar').classList.remove('open')}
+function openModal(type){modalType=type;const cfg={child:['طفل','Ajouter un enfant','Créez un nouveau dossier de suivi.',`<label>Nom et prénom<input name="name" required placeholder="Ex. Amine B."></label><label>Âge<input name="age" type="number" min="3" max="18" required></label><label>Niveau scolaire<select name="level"><option>Préscolaire</option><option>1re année primaire</option><option>2e année primaire</option><option>3e année primaire</option><option>4e année primaire</option><option>5e année primaire</option></select></label><label>Difficulté principale<input name="focus" placeholder="Ex. Lecture syllabique"></label>`],exercise:['أ ب','Créer un exercice','Préparez une activité adaptée à l’enfant.',`<label>Titre<input name="title" required placeholder="Ex. Reconnaître les lettres"></label><label>Symbole ou syllabe arabe<input name="symbol" dir="rtl" required placeholder="بَ"></label><label>Compétence<input name="skill" placeholder="Discrimination visuelle"></label><label>Niveau<select name="level"><option>Facile</option><option>Moyen</option><option>Avancé</option></select></label>`],session:['□','Nouvelle séance','Planifiez une séance avec un enfant.',`<label>Enfant<select name="childName">${children.map(c=>`<option>${safe(c.name)}</option>`)}</select></label><label>Date<input name="date" type="date" required></label><label>Heure<input name="time" type="time" required></label><label>Type<input name="type" placeholder="Lecture"></label><label>Durée (minutes)<input name="duration" type="number" value="45"></label>`]}[type];$('#modalSymbol').textContent=cfg[0];$('#modalTitle').textContent=cfg[1];$('#modalSubtitle').textContent=cfg[2];$('#modalFields').innerHTML=cfg[3];$('#modal').classList.remove('hidden')}
+async function submitModal(e){e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));if(modalType==='child'){data.age=Number(data.age);data.progress=0;await save('children',data)}if(modalType==='exercise')await save('exercises',data);if(modalType==='session'){data.duration=Number(data.duration);await save('sessions',data)}closeModal();render();toast('Enregistrement effectué avec succès')}
+function closeModal(){$('#modal').classList.add('hidden');$('#modalForm').reset()}
+function toast(t){$('#toast').textContent=`✓ ${t}`;$('#toast').classList.remove('hidden');setTimeout(()=>$('#toast').classList.add('hidden'),2600)}
+function bindEvents(){
+ $('#loginForm').onsubmit=async e=>{e.preventDefault();try{await firebase.signInWithEmailAndPassword(auth,$('#loginEmail').value,$('#loginPassword').value)}catch(err){$('#authError').textContent='E-mail ou mot de passe incorrect.'}};
+ $('#demoBtn').onclick=startDemo;$('#logoutBtn').onclick=async()=>{if(demo){demo=false;showAuth()}else await firebase.signOut(auth)};$('#searchInput').oninput=renderChildren;
+ $$('.nav[data-page],.mobile-nav button[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));$$('[data-goto]').forEach(b=>b.onclick=()=>go(b.dataset.goto));$('#menuBtn').onclick=()=>$('.sidebar').classList.toggle('open');
+ $('#addChildBtn').onclick=()=>openModal('child');$$('.add-child-secondary').forEach(b=>b.onclick=()=>openModal('child'));$('#addExerciseBtn').onclick=()=>openModal('exercise');$$('.add-exercise-secondary').forEach(b=>b.onclick=()=>openModal('exercise'));$('#addSessionBtn').onclick=()=>openModal('session');$('#closeModal').onclick=closeModal;$('#modal').onmousedown=e=>{if(e.target===e.currentTarget)closeModal()};$('#modalForm').onsubmit=submitModal;
+}
+boot();
