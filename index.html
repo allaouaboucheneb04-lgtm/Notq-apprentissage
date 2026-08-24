@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#218a73"><title>Notq — Apprentissage arabe</title>
-  <link rel="stylesheet" href="styles.css"><link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="runner.css"><link rel="manifest" href="manifest.json">
 </head>
 <body>
 <div id="loading" class="loading"><div class="loader-logo" lang="ar">ن</div><p>Chargement de Notq…</p></div>
@@ -37,6 +37,7 @@
   <nav class="mobile-nav"><button data-page="dashboard" class="active">⌂<span>Accueil</span></button><button data-page="children">♙<span>Enfants</span></button><button data-page="exercises">▤<span>Exercices</span></button><button data-page="progress">↗<span>Progrès</span></button></nav>
 </div>
 <div id="modal" class="modal-backdrop hidden"><form id="modalForm" class="modal"><button type="button" id="closeModal" class="close">×</button><div id="modalSymbol" class="modal-symbol" lang="ar">طفل</div><h2 id="modalTitle">Ajouter un enfant</h2><p id="modalSubtitle"></p><div id="modalFields"></div><button type="submit" class="primary submit">Enregistrer</button></form></div>
+<div id="exerciseRunner" class="runner-backdrop hidden"><section class="runner"><button id="closeRunner" class="close">×</button><div class="runner-top"><span id="runnerStep">Question 1/5</span><div class="runner-progress"><i id="runnerProgress"></i></div><strong id="runnerScore">0 point</strong></div><div id="runnerBody"></div></section></div>
 <div id="toast" class="toast hidden"></div>
 <script type="module" src="app.js"></script>
 </body></html>
