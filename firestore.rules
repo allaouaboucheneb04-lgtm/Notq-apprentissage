@@ -1,13 +1,152 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function v2UserPath(userId) {
+      return /databases/$(database)/documents/notq_v2/app/users/$(userId);
+    }
+
+    function hasV2Profile() {
+      return signedIn() && exists(v2UserPath(request.auth.uid));
+    }
+
+    function isSuperAdmin() {
+      return hasV2Profile()
+        && get(v2UserPath(request.auth.uid)).data.role == 'super_admin'
+        && get(v2UserPath(request.auth.uid)).data.status == 'active';
+    }
+
+    function validPublicOrthophonistProfile(data) {
+      return data.keys().hasAll([
+          'firstName',
+          'lastName',
+          'fullName',
+          'email',
+          'phone',
+          'workplace',
+          'wilaya',
+          'commune',
+          'role',
+          'status',
+          'registrationSource',
+          'documentsMethod',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'firstName',
+          'lastName',
+          'fullName',
+          'email',
+          'phone',
+          'workplace',
+          'wilaya',
+          'commune',
+          'role',
+          'status',
+          'registrationSource',
+          'documentsMethod',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.firstName is string
+        && data.firstName.size() >= 1
+        && data.firstName.size() <= 60
+        && data.lastName is string
+        && data.lastName.size() >= 1
+        && data.lastName.size() <= 60
+        && data.fullName is string
+        && data.fullName == data.firstName + ' ' + data.lastName
+        && data.email is string
+        && data.email.size() <= 254
+        && data.phone is string
+        && data.phone.size() >= 4
+        && data.phone.size() <= 30
+        && data.workplace is string
+        && data.workplace.size() <= 120
+        && data.wilaya is string
+        && data.wilaya.size() >= 1
+        && data.wilaya.size() <= 80
+        && data.commune is string
+        && data.commune.size() >= 1
+        && data.commune.size() <= 80
+        && data.role == 'orthophonist'
+        && data.status == 'pending'
+        && data.registrationSource == 'public_form'
+        && data.documentsMethod == 'email'
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validSelfProfileUpdate(data) {
+      return data.firstName is string
+        && data.firstName.size() >= 1
+        && data.firstName.size() <= 60
+        && data.lastName is string
+        && data.lastName.size() >= 1
+        && data.lastName.size() <= 60
+        && data.fullName == data.firstName + ' ' + data.lastName
+        && data.phone is string
+        && data.phone.size() >= 4
+        && data.phone.size() <= 30
+        && data.workplace is string
+        && data.workplace.size() <= 120
+        && data.wilaya is string
+        && data.wilaya.size() >= 1
+        && data.wilaya.size() <= 80
+        && data.commune is string
+        && data.commune.size() >= 1
+        && data.commune.size() <= 80
+        && data.updatedAt == request.time;
+    }
+
+    // Ancienne application conservée sans modification.
     match /orthophonists/{orthophonistId} {
-      allow read, create, update: if request.auth != null && request.auth.uid == orthophonistId;
+      allow read, create, update: if signedIn()
+        && request.auth.uid == orthophonistId;
       allow delete: if false;
+
       match /{collection}/{documentId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == orthophonistId
+        allow read, create, update, delete: if signedIn()
+          && request.auth.uid == orthophonistId
           && collection in ['children', 'exercises', 'sessions', 'results'];
       }
+    }
+
+    // Nouvelle structure Notq V2.
+    match /notq_v2/app/users/{userId} {
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.auth.token.email == request.resource.data.email
+        && validPublicOrthophonistProfile(request.resource.data);
+
+      allow get: if signedIn()
+        && (request.auth.uid == userId || isSuperAdmin());
+
+      allow list: if isSuperAdmin();
+
+      allow update: if isSuperAdmin()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'firstName',
+            'lastName',
+            'fullName',
+            'phone',
+            'workplace',
+            'wilaya',
+            'commune',
+            'updatedAt'
+          ])
+          && validSelfProfileUpdate(request.resource.data)
+        );
+
+      allow delete: if false;
     }
   }
 }

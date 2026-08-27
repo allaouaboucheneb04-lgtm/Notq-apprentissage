@@ -1,1 +1,12 @@
-{"name":"Notq — Apprentissage arabe","short_name":"Notq","start_url":"./index.html","display":"standalone","background_color":"#f7f8f3","theme_color":"#218a73","lang":"fr"}
+{
+  "name": "Notq — Apprentissage arabe",
+  "short_name": "Notq",
+  "description": "Suivi orthophonique et apprentissage scolaire en arabe.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8fb",
+  "theme_color": "#163f70"
+}
